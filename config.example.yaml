@@ -1,0 +1,17 @@
+# Server configurations
+server:
+  port: 9000
+mqtt:
+  host: 192.168.1.10
+  port: 1883
+# devices configurations
+devices:
+  plug:
+    name: plug
+    type: action.devices.types.OUTLET
+    willReportState: false
+    traits:
+      - action.devices.commands.OnOff
+templates:
+  plug:
+    action.devices.commands.OnOff: '{"state":"%s"}'

@@ -19,3 +19,12 @@
 
 # Go workspace file
 go.work
+
+.credentials
+devices.json
+config.yaml
+
+.vscode
+.idea
+
+.fuse_hidden*
