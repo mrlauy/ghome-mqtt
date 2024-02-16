@@ -286,7 +286,7 @@ func (a *auth) Token(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		log.Warn("token info", "info", tokenInfo)
+		log.Info("token info", "info", tokenInfo)
 
 		response = map[string]interface{}{
 			"token_type":   "bearer",
@@ -306,11 +306,12 @@ func (a *auth) Token(w http.ResponseWriter, r *http.Request) {
 
 		scope := getInput(r, "scope")
 		tokenGenerateRequest := &oauth2.TokenGenerateRequest{
-			ClientID:     client,
-			ClientSecret: secret,
-			Refresh:      refreshToken,
-			Scope:        scope,
-			Request:      r,
+			ClientID:       client,
+			ClientSecret:   secret,
+			Refresh:        refreshToken,
+			AccessTokenExp: 24 * time.Hour,
+			Scope:          scope,
+			Request:        r,
 		}
 
 		tokenInfo, err := a.manager.GenerateAccessToken(r.Context(), oauth2.GrantType(grantType), tokenGenerateRequest)
@@ -320,7 +321,7 @@ func (a *auth) Token(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		log.Warn("token info", "info", tokenInfo)
+		log.Info("token info", "info", tokenInfo)
 
 		response = map[string]interface{}{
 			"token_type":   "bearer",
@@ -381,7 +382,7 @@ func (a *auth) generateCode(ctx context.Context, responseType string, userId str
 		UserID:         userId,
 		RedirectURI:    redirectUri,
 		Scope:          scope,
-		AccessTokenExp: time.Hour * 24,
+		AccessTokenExp: 2 * time.Minute,
 		Request:        r,
 	}
 
