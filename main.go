@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"html/template"
 	"log"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
+	"os"
 
 	"github.com/gorilla/mux"
 	"github.com/mrlauy/ghome-mqtt/fullfillment"
@@ -17,13 +19,24 @@ const requestFullDump = false
 var loginPage *template.Template
 var authPage *template.Template
 
+const (
+	LevelDebug = slog.Level(-4)
+	LevelInfo  = slog.Level(0)
+	LevelWarn  = slog.Level(4)
+	LevelError = slog.Level(8)
+)
+
 func main() {
 	cfg, err := ReadConfig()
 	if err != nil {
 		log.Fatal("failed to read config: ", err)
 	}
 
-	auth := NewAuth("sampleClientId", "sampleClientSecret", "http://localhost")
+	textHandler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: LevelDebug})
+	logger := slog.New(textHandler)
+	logger.Info("")
+
+	auth := NewAuth(cfg.Auth)
 	mqtt, err := NewMqtt(cfg.Mqtt)
 	if err != nil {
 		log.Fatal("failed to start mqtt: ", err)
@@ -40,7 +53,6 @@ func main() {
 	router := mux.NewRouter()
 	router.Use(loggingMiddleware)
 
-	router.HandleFunc("/", IndexHandler)
 	router.HandleFunc("/login", auth.Login(loginPage))
 	router.HandleFunc("/confirm", auth.Confirm(authPage))
 	router.HandleFunc("/oauth/authorize", auth.Authorize)
@@ -55,10 +67,6 @@ func main() {
 	port := cfg.Server.Port
 	log.Printf("start server on port: %d", port)
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), nil))
-}
-
-func IndexHandler(w http.ResponseWriter, r *http.Request) {
-	http.Redirect(w, r, "/login", http.StatusSeeOther)
 }
 
 func loggingMiddleware(next http.Handler) http.Handler {

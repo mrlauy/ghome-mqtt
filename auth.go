@@ -30,27 +30,28 @@ type auth struct {
 	codes        map[string]string
 }
 
-func NewAuth(clientId string, clientSecret string, domain string) *auth {
+func NewAuth(cfg AuthConfig) *auth {
 	clientStore := store.NewClientStore()
-	clientStore.Set(clientId, &models.Client{
-		ID:     clientId,
-		Secret: clientSecret,
-		Domain: "https://oauth-redirect.googleusercontent.com/r/smart-node-438",
+	clientStore.Set(cfg.Client.Id, &models.Client{
+		ID:     cfg.Client.Id,
+		Secret: cfg.Client.Secret,
+		Domain: "/smart-node-438",
 	})
 
 	manager := manage.NewDefaultManager()
 	manager.SetAuthorizeCodeTokenCfg(manage.DefaultAuthorizeCodeTokenCfg)
 	manager.MapClientStorage(clientStore)
-	manager.MustTokenStorage(store.NewMemoryTokenStore())
+	// manager.MustTokenStorage(store.NewMemoryTokenStore())
+	manager.MustTokenStorage(store.NewFileTokenStore(cfg.TokenStore))
 
-	credentials, err := loadCredentials()
+	credentials, err := loadCredentials(cfg.Credientials)
 	if err != nil || len(credentials) < 1 {
 		log.Warn("no user credentials, add users to .credentials", err)
 	}
 
 	return &auth{
-		clientId:     clientId,
-		clientSecret: clientSecret,
+		clientId:     cfg.Client.Id,
+		clientSecret: cfg.Client.Secret,
 		credentials:  credentials,
 		manager:      manager,
 		codes:        map[string]string{},
@@ -388,9 +389,9 @@ func (a *auth) generateCode(ctx context.Context, responseType string, userId str
 	return tokenInfo.GetCode(), nil
 }
 
-func loadCredentials() (map[string]string, error) {
+func loadCredentials(filename string) (map[string]string, error) {
 	credentials := map[string]string{}
-	file, err := os.Open(".credentials")
+	file, err := os.Open(filename)
 	if err != nil {
 		return credentials, fmt.Errorf("failed to load .credentials")
 	}

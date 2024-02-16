@@ -16,7 +16,7 @@ func TestAuthorizeRequest(t *testing.T) {
 	redirectLocation := "/login"
 
 	url := fmt.Sprintf("https://myservice.example.com/oauth/authorize?client_id=CLIENT_ID&redirect_uri=REDIRECT_URI&state=STATE_STRING&scope=REQUESTED_SCOPES&response_type=code&user_locale=LOCALE")
-	auth := NewAuth("CLIENT_ID", "client-secret", "http://localhost")
+	auth := NewAuth(authConfig())
 
 	request, err := http.NewRequest(http.MethodGet, url, nil)
 	assert.Nil(t, err, "failed to create request")
@@ -34,5 +34,19 @@ func TestAuthorizeRequest(t *testing.T) {
 
 	if responseRecorder.Header().Get("location") != redirectLocation {
 		t.Errorf("redirect location unexpected: got %v want %v", responseRecorder.Header().Get("location"), redirectLocation)
+	}
+}
+
+func authConfig() AuthConfig {
+	return AuthConfig{
+		Client: struct {
+			Id     string
+			Secret string
+			Domain string
+		}{
+			Id: "CLIENT_ID", Secret: "client-secret", Domain: "http://localhost",
+		},
+		Credientials: ".credentials",
+		TokenStore:   ".tokenstore",
 	}
 }

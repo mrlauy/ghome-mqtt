@@ -19,14 +19,17 @@ type Config struct {
 
 type ServerConfig struct {
 	Port int    `yaml:"port" env:"SERVER_PORT" env-default:"8080"`
-	Host string `yaml:"host" env:"host" env-default:"localhost"`
+	Host string `yaml:"host" env:"HOST" env-default:"localhost"`
 }
 
 type AuthConfig struct {
 	Client struct {
 		Id     string `yaml:"id" env:"CLIENT_ID" env-default:"000000"`
 		Secret string `yaml:"secret" env:"CLIENT_SECRET" env-default:"999999"`
+		Domain string `yaml:"domain" env:"CLIENT_SECRET" env-default:"https://oauth-redirect.googleusercontent.com/r/project/project-id"`
 	} `yaml:"client"`
+	Credientials string `yaml:"credentials" env:"CREDENTIALS" env-default:".credentials"`
+	TokenStore   string `yaml:"tokenStore" env:"TOKEN_STORE" env-default:".tokenstore"`
 }
 
 type MqttConfig struct {
