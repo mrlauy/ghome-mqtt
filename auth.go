@@ -3,6 +3,8 @@ package main
 import (
 	"bufio"
 	"context"
+	"github.com/go-oauth2/oauth2/v4/generates"
+	"github.com/golang-jwt/jwt"
 	"net/http"
 	"os"
 	"strings"
@@ -35,7 +37,7 @@ func NewAuth(cfg AuthConfig) *auth {
 	clientStore.Set(cfg.Client.Id, &models.Client{
 		ID:     cfg.Client.Id,
 		Secret: cfg.Client.Secret,
-		Domain: "/smart-node-438",
+		Domain: cfg.Client.Domain,
 	})
 
 	manager := manage.NewDefaultManager()
@@ -43,6 +45,7 @@ func NewAuth(cfg AuthConfig) *auth {
 	manager.MapClientStorage(clientStore)
 	// manager.MustTokenStorage(store.NewMemoryTokenStore())
 	manager.MustTokenStorage(store.NewFileTokenStore(cfg.TokenStore))
+	manager.MapAccessGenerate(generates.NewJWTAccessGenerate("", []byte("00000000"), jwt.SigningMethodHS512))
 
 	credentials, err := loadCredentials(cfg.Credientials)
 	if err != nil || len(credentials) < 1 {
