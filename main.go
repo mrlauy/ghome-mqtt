@@ -16,9 +16,6 @@ import (
 
 const requestFullDump = false
 
-var loginPage *template.Template
-var authPage *template.Template
-
 const (
 	LevelDebug = slog.Level(-4)
 	LevelInfo  = slog.Level(0)
@@ -47,8 +44,8 @@ func main() {
 		log.Fatal("failed to start fullfillment handler: ", err)
 	}
 
-	loginPage = template.Must(template.ParseFiles("templates/login.html"))
-	authPage = template.Must(template.ParseFiles("templates/auth.html"))
+	loginPage := template.Must(template.ParseFiles("templates/login.html"))
+	authPage := template.Must(template.ParseFiles("templates/auth.html"))
 
 	router := mux.NewRouter()
 	router.Use(loggingMiddleware)
@@ -108,7 +105,7 @@ func loggingMiddleware(next http.Handler) http.Handler {
 			response := recorder.Body.Bytes()
 
 			w.WriteHeader(recorder.Code)
-			w.Write(response)
+			_, _ = w.Write(response)
 		} else {
 			// Call the next handler, which can be another middleware in the chain, or the final handler.
 			next.ServeHTTP(w, r)

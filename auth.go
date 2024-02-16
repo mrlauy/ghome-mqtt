@@ -43,7 +43,6 @@ func NewAuth(cfg AuthConfig) *auth {
 	manager := manage.NewDefaultManager()
 	manager.SetAuthorizeCodeTokenCfg(manage.DefaultAuthorizeCodeTokenCfg)
 	manager.MapClientStorage(clientStore)
-	// manager.MustTokenStorage(store.NewMemoryTokenStore())
 	manager.MustTokenStorage(store.NewFileTokenStore(cfg.TokenStore))
 	manager.MapAccessGenerate(generates.NewJWTAccessGenerate("", []byte("00000000"), jwt.SigningMethodHS512))
 
@@ -63,7 +62,7 @@ func NewAuth(cfg AuthConfig) *auth {
 
 func (a *auth) Login(page *template.Template) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		store, err := session.Start(r.Context(), w, r)
+		sessionStore, err := session.Start(r.Context(), w, r)
 		if err != nil {
 			log.Error("failed to get login session", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -90,8 +89,13 @@ func (a *auth) Login(page *template.Template) http.HandlerFunc {
 
 			log.Info("/login", "username", username)
 
-			store.Set("LoggedInUserID", username)
-			store.Save()
+			sessionStore.Set("LoggedInUserID", username)
+			err = sessionStore.Save()
+			if err != nil {
+				log.Error("failed to store session", err)
+				http.Error(w, "server error", http.StatusInternalServerError)
+				return
+			}
 
 			w.Header().Set("Location", "/confirm")
 			w.WriteHeader(http.StatusFound)
@@ -99,20 +103,25 @@ func (a *auth) Login(page *template.Template) http.HandlerFunc {
 		}
 
 		log.Info("/login")
-		loginPage.Execute(w, "data")
+		err = page.Execute(w, "data")
+		if err != nil {
+			log.Error("failed to render login page", err)
+			http.Error(w, "server error", http.StatusInternalServerError)
+			return
+		}
 	}
 }
 
 func (a *auth) Confirm(page *template.Template) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		store, err := session.Start(r.Context(), w, r)
+		sessionStore, err := session.Start(r.Context(), w, r)
 		if err != nil {
 			log.Error("error starting session in confirm handler", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		userId, ok := store.Get("LoggedInUserID")
+		userId, ok := sessionStore.Get("LoggedInUserID")
 		if !ok {
 			log.Warn("/confirm failed to get user in session")
 			w.Header().Set("Location", "/login")
@@ -121,7 +130,12 @@ func (a *auth) Confirm(page *template.Template) http.HandlerFunc {
 		}
 
 		log.Info("/confirm", "user", userId)
-		authPage.Execute(w, "data")
+		err = page.Execute(w, "data")
+		if err != nil {
+			log.Error("failed to render auth page", err)
+			http.Error(w, "server error", http.StatusInternalServerError)
+			return
+		}
 	}
 }
 
@@ -182,7 +196,12 @@ func (a *auth) Authorize(w http.ResponseWriter, r *http.Request) {
 		sessionStore.Delete("scope")
 		sessionStore.Delete("state")
 		sessionStore.Delete("redirectUri")
-		sessionStore.Save()
+		err = sessionStore.Save()
+		if err != nil {
+			log.Error("failed to store session", err)
+			http.Error(w, "server error", http.StatusInternalServerError)
+			return
+		}
 
 		responseUrl := fmt.Sprintf("%s?code=%s&state=%s", redirectUri, authorizationCode, state)
 		log.Info("/authorize redirect", "location", responseUrl)
@@ -216,7 +235,12 @@ func (a *auth) Authorize(w http.ResponseWriter, r *http.Request) {
 	sessionStore.Set("state", state)
 	sessionStore.Set("redirectUri", redirectUri)
 	sessionStore.Set("scope", scope)
-	sessionStore.Save()
+	err = sessionStore.Save()
+	if err != nil {
+		log.Error("failed to store session", err)
+		http.Error(w, "server error", http.StatusInternalServerError)
+		return
+	}
 
 	log.Info("/authorize", "client", client, "responseType", responseType, "scope", scope, "redirectUri", redirectUri)
 
@@ -309,7 +333,7 @@ func (a *auth) Token(w http.ResponseWriter, r *http.Request) {
 			ClientID:       client,
 			ClientSecret:   secret,
 			Refresh:        refreshToken,
-			AccessTokenExp: 24 * time.Hour,
+			AccessTokenExp: 2 * time.Minute,
 			Scope:          scope,
 			Request:        r,
 		}
