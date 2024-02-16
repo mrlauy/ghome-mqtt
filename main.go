@@ -2,6 +2,9 @@ package main
 
 import (
 	"fmt"
+	auth2 "github.com/mrlauy/ghome-mqtt/auth"
+	"github.com/mrlauy/ghome-mqtt/config"
+	mqtt2 "github.com/mrlauy/ghome-mqtt/mqtt"
 	"html/template"
 	"log"
 	"log/slog"
@@ -24,7 +27,7 @@ const (
 )
 
 func main() {
-	cfg, err := ReadConfig()
+	cfg, err := config.ReadConfig()
 	if err != nil {
 		log.Fatal("failed to read config: ", err)
 	}
@@ -33,8 +36,8 @@ func main() {
 	logger := slog.New(textHandler)
 	logger.Info("")
 
-	auth := NewAuth(cfg.Auth)
-	mqtt, err := NewMqtt(cfg.Mqtt)
+	auth := auth2.NewAuth(cfg.Auth)
+	mqtt, err := mqtt2.NewMqtt(cfg.Mqtt)
 	if err != nil {
 		log.Fatal("failed to start mqtt: ", err)
 	}

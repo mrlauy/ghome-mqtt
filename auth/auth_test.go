@@ -1,7 +1,8 @@
-package main
+package auth
 
 import (
 	"fmt"
+	"github.com/mrlauy/ghome-mqtt/config"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -37,8 +38,8 @@ func TestAuthorizeRequest(t *testing.T) {
 	}
 }
 
-func authConfig() AuthConfig {
-	return AuthConfig{
+func authConfig() config.AuthConfig {
+	return config.AuthConfig{
 		Client: struct {
 			Id     string
 			Secret string

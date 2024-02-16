@@ -1,7 +1,8 @@
-package main
+package mqtt
 
 import (
 	"fmt"
+	"github.com/mrlauy/ghome-mqtt/config"
 	log "log/slog"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
@@ -11,7 +12,7 @@ type Mqtt struct {
 	client mqtt.Client
 }
 
-func NewMqtt(cfg MqttConfig) (*Mqtt, error) {
+func NewMqtt(cfg config.MqttConfig) (*Mqtt, error) {
 	opts := mqtt.NewClientOptions()
 	opts.AddBroker(fmt.Sprintf("tcp://%s:%d", cfg.Host, cfg.Port))
 	opts.SetClientID("ghome-client")
