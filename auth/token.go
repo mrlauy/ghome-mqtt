@@ -238,7 +238,7 @@ func (a *Auth) generateRefreshToken(client, secret string, refreshToken string, 
 		ClientID:       client,
 		ClientSecret:   secret,
 		Refresh:        refreshToken,
-		AccessTokenExp: 2 * time.Minute,
+		AccessTokenExp: 24 * time.Hour,
 		Scope:          scope,
 		Request:        r,
 	}
