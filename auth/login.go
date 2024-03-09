@@ -9,6 +9,10 @@ import (
 	"strings"
 )
 
+type PageData struct {
+	Error string
+}
+
 func (a *Auth) Login(page *template.Template) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		sessionStore, err := session.Start(r.Context(), w, r)
@@ -25,14 +29,13 @@ func (a *Auth) Login(page *template.Template) http.HandlerFunc {
 			storedPassword, ok := a.credentials[username]
 			if !ok {
 				log.Warn("user unknown", "user", username)
-				http.Error(w, "wrong credentials", http.StatusUnauthorized)
+				responseError(w, page, "wrong credentials", http.StatusUnauthorized)
 				return
 			}
 
 			if !checkPasswordHash(password, storedPassword) {
-				// TODO return error in page
 				log.Warn("wrong credentials", "user", username)
-				http.Error(w, "wrong credentials", http.StatusUnauthorized)
+				responseError(w, page, "wrong credentials", http.StatusUnauthorized)
 				return
 			}
 
@@ -42,7 +45,7 @@ func (a *Auth) Login(page *template.Template) http.HandlerFunc {
 			err = sessionStore.Save()
 			if err != nil {
 				log.Error("failed to store session", err)
-				http.Error(w, "server error", http.StatusInternalServerError)
+				responseError(w, page, "server error", http.StatusInternalServerError)
 				return
 			}
 
@@ -52,7 +55,7 @@ func (a *Auth) Login(page *template.Template) http.HandlerFunc {
 		}
 
 		log.Info("/login")
-		err = page.Execute(w, "data")
+		err = page.Execute(w, nil)
 		if err != nil {
 			log.Error("failed to render login page", err)
 			http.Error(w, "server error", http.StatusInternalServerError)
@@ -66,7 +69,7 @@ func (a *Auth) Confirm(page *template.Template) http.HandlerFunc {
 		sessionStore, err := session.Start(r.Context(), w, r)
 		if err != nil {
 			log.Error("error starting session in confirm handler", err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			responseError(w, page, "server error", http.StatusInternalServerError)
 			return
 		}
 
@@ -79,13 +82,23 @@ func (a *Auth) Confirm(page *template.Template) http.HandlerFunc {
 		}
 
 		log.Info("/confirm", "user", userId)
-		err = page.Execute(w, "data")
+		err = page.Execute(w, nil)
 		if err != nil {
-			log.Error("failed to render auth page", err)
+			log.Error("failed to render login page", err)
 			http.Error(w, "server error", http.StatusInternalServerError)
 			return
 		}
 	}
+}
+
+func responseError(w http.ResponseWriter, page *template.Template, message string, code int) {
+	err := page.Execute(w, PageData{Error: message})
+	if err != nil {
+		log.Error("failed to render login page", err)
+		http.Error(w, "server error", http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(code)
 }
 
 func checkPasswordHash(password, hash string) bool {

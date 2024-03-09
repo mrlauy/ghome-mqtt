@@ -41,12 +41,16 @@ func TestAuthorizeRequest(t *testing.T) {
 func authConfig() config.AuthConfig {
 	return config.AuthConfig{
 		Client: struct {
+			Id     string `yaml:"id" env:"CLIENT_ID" env-default:"000000"`
+			Secret string `yaml:"secret" env:"CLIENT_SECRET" env-default:"999999"`
+			Domain string `yaml:"domain" env:"CLIENT_SECRET" env-default:"https://oauth-redirect.googleusercontent.com/r/project/project-id"`
+		}(struct {
 			Id     string
 			Secret string
 			Domain string
 		}{
 			Id: "CLIENT_ID", Secret: "client-secret", Domain: "http://localhost",
-		},
+		}),
 		Credientials: ".credentials",
 		TokenStore:   ".tokenstore",
 	}
