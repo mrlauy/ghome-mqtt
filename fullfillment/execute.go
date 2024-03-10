@@ -92,8 +92,8 @@ func (f *Fullfillment) execute(requestId string, payload PayloadRequest) Execute
 	executeCommands := []ExecuteCommands{}
 	for _, command := range payload.Commands {
 		for _, device := range command.Devices {
-			if _, ok := f.state[device.ID]; !ok {
-				log.Error("failed to find local state", "device", device.ID, "state", f.state)
+			if deviceState, ok := f.devices[device.ID]; !ok {
+				log.Error("failed to find local state", "device", device.ID, "state", deviceState)
 				executeCommands = append(executeCommands, ExecuteCommands{
 					Ids:    []string{device.ID},
 					Status: Error,
@@ -111,7 +111,7 @@ func (f *Fullfillment) execute(requestId string, payload PayloadRequest) Execute
 		}
 	}
 
-	log.Info("state after executing command", "state", f.state)
+	log.Info("state after executing command", "devices", f.devices)
 
 	return ExecuteResponse{
 		RequestID: requestId,
@@ -121,25 +121,25 @@ func (f *Fullfillment) execute(requestId string, payload PayloadRequest) Execute
 	}
 }
 
-func (f *Fullfillment) executeCommand(device string, execution ExecutionRequest) ExecuteCommands {
-	deviceState := f.state[device]
+func (f *Fullfillment) executeCommand(deviceId string, execution ExecutionRequest) ExecuteCommands {
+	device := f.devices[deviceId]
 	defer func() {
-		f.state[device] = deviceState
+		f.devices[deviceId] = device
 	}()
 
 	switch execution.Command {
 	case "action.devices.commands.OnOff":
 		action := onOffValue(execution.Params.On)
-		message, err := f.fillMessage(device, execution.Command, action)
+		message, err := f.fillMessage(deviceId, execution.Command, action)
 		if err != nil {
 			log.Error("failed to execute command '%s'", execution.Command, err)
-			return errorCommand(device)
+			return errorCommand(deviceId)
 		}
 
-		f.sentCommand(&deviceState, device, "set", message)
-		deviceState.On = execution.Params.On
+		f.sentCommand(deviceId, message)
+		device.State.On = execution.Params.On
 		return ExecuteCommands{
-			Ids:    []string{device},
+			Ids:    []string{deviceId},
 			Status: Success,
 			States: ExecuteStates{
 				On:     execution.Params.On,
@@ -147,15 +147,15 @@ func (f *Fullfillment) executeCommand(device string, execution ExecutionRequest)
 			},
 		}
 	case "action.devices.commands.mute":
-		message, err := f.fillMessage(device, execution.Command, strconv.FormatBool(execution.Params.Mute))
+		message, err := f.fillMessage(deviceId, execution.Command, strconv.FormatBool(execution.Params.Mute))
 		if err != nil {
 			log.Error("failed to execute command '%s'", execution.Command, err)
-			return errorCommand(device)
+			return errorCommand(deviceId)
 		}
 
-		f.sentCommand(&deviceState, device, "set", message)
+		f.sentCommand(deviceId, message)
 		return ExecuteCommands{
-			Ids:    []string{device},
+			Ids:    []string{deviceId},
 			Status: Success,
 			States: ExecuteStates{
 				Online:        true,
@@ -165,15 +165,15 @@ func (f *Fullfillment) executeCommand(device string, execution ExecutionRequest)
 		}
 	case "action.devices.commands.setVolume":
 		volume := execution.Params.VolumeLevel
-		message, err := f.fillMessage(device, execution.Command, strconv.Itoa(volume))
+		message, err := f.fillMessage(deviceId, execution.Command, strconv.Itoa(volume))
 		if err != nil {
 			log.Error("failed to execute command '%s'", execution.Command, err)
-			return errorCommand(device)
+			return errorCommand(deviceId)
 		}
 
-		f.sentCommand(&deviceState, device, "set", message)
+		f.sentCommand(deviceId, message)
 		return ExecuteCommands{
-			Ids:    []string{device},
+			Ids:    []string{deviceId},
 			Status: Success,
 			States: ExecuteStates{
 				Online:        true,
@@ -186,15 +186,15 @@ func (f *Fullfillment) executeCommand(device string, execution ExecutionRequest)
 		if execution.Params.RelativeSteps > 0 {
 			action = "increase"
 		}
-		message, err := f.fillMessage(device, execution.Command, action)
+		message, err := f.fillMessage(deviceId, execution.Command, action)
 		if err != nil {
 			log.Error("failed to execute command '%s'", execution.Command, err)
-			return errorCommand(device)
+			return errorCommand(deviceId)
 		}
 
-		f.sentCommand(&deviceState, device, "set", message)
+		f.sentCommand(deviceId, message)
 		return ExecuteCommands{
-			Ids:    []string{device},
+			Ids:    []string{deviceId},
 			Status: Success,
 			States: ExecuteStates{
 				Online:        true,
@@ -203,9 +203,9 @@ func (f *Fullfillment) executeCommand(device string, execution ExecutionRequest)
 			},
 		}
 	default:
-		log.Info("execute command", "command", execution.Command, "device", device)
+		log.Info("execute command", "command", execution.Command, "device", deviceId)
 		return ExecuteCommands{
-			Ids:    []string{device},
+			Ids:    []string{deviceId},
 			Status: Error,
 			States: ExecuteStates{
 				Online: false,
@@ -214,14 +214,10 @@ func (f *Fullfillment) executeCommand(device string, execution ExecutionRequest)
 	}
 }
 
-func (f *Fullfillment) fillMessage(device string, command string, args ...any) (msg string, err error) {
-	messageTemplates, deviceFound := f.executionTemplates[device]
-	if !deviceFound {
-		return "", fmt.Errorf("failed to find device `%s` in execution template", device)
-	}
-	messageTemplate, commandfound := messageTemplates[command]
-	if !commandfound {
-		return "", fmt.Errorf("failed to find command `%s` for device `%s` in execution template", command, device)
+func (f *Fullfillment) fillMessage(deviceId string, command string, args ...any) (msg string, err error) {
+	messageTemplate, commandFound := f.executionTemplates[command]
+	if !commandFound {
+		return "", fmt.Errorf("failed to find command `%s` for device `%s` in execution template", command, deviceId)
 
 	}
 
@@ -235,15 +231,14 @@ func (f *Fullfillment) fillMessage(device string, command string, args ...any) (
 	return message, nil
 }
 
-func (f *Fullfillment) sentCommand(deviceState *LocalState, device string, command string, message string) {
-	f.handler.SendMessage(fmt.Sprintf("device/%s/%s", device, command), message)
-
-	deviceState.DebugCommand = append(deviceState.DebugCommand, fmt.Sprintf("%s: %s", command, message))
+func (f *Fullfillment) sentCommand(deviceId string, message string) {
+	topic := f.devices[deviceId].Topic
+	f.handler.SendMessage(fmt.Sprintf(topic, deviceId), message)
 }
 
-func errorCommand(device string) ExecuteCommands {
+func errorCommand(deviceId string) ExecuteCommands {
 	return ExecuteCommands{
-		Ids:       []string{device},
+		Ids:       []string{deviceId},
 		Status:    Error,
 		ErrorCode: "hardError",
 	}

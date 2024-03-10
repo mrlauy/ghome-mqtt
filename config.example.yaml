@@ -13,5 +13,4 @@ devices:
     traits:
       - action.devices.commands.OnOff
 templates:
-  plug:
-    action.devices.commands.OnOff: '{"state":"%s"}'
+  action.devices.commands.OnOff: '{"state":"%s"}'

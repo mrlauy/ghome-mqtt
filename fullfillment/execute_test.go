@@ -10,14 +10,11 @@ import (
 func TestFillMessage(t *testing.T) {
 	// messageHandlerMock := &MessageHandlerMock{map[string][]string{}}
 	fullfillment := &Fullfillment{
-		executionTemplates: ExecutionTemplates{
-			"device": {
-				"command.Test":    `{"argument":"%s"}`,
-				"command.TestTwo": `{"first_argument":"%s", "second_argument":"%s"}`,
-				"command.TestInt": `{"argument":"%d"}`,
-				"command.TestVar": `{"argument":"%v"}`,
-			},
-			"no-template-device": {},
+		executionTemplates: map[string]string{
+			"command.Test":    `{"argument":"%s"}`,
+			"command.TestTwo": `{"first_argument":"%s", "second_argument":"%s"}`,
+			"command.TestInt": `{"argument":"%d"}`,
+			"command.TestVar": `{"argument":"%v"}`,
 		},
 	}
 
@@ -78,14 +75,6 @@ func TestFillMessage(t *testing.T) {
 			expectedError:  nil,
 		},
 		{
-			name:           "Unknown device error",
-			device:         "unknown-device",
-			command:        "trait",
-			args:           []interface{}{},
-			expectedResult: "",
-			expectedError:  errors.New("failed to find device `unknown-device` in execution template"),
-		},
-		{
 			name:           "Unknown template error",
 			device:         "no-template-device",
 			command:        "trait",
@@ -112,14 +101,15 @@ func TestFillMessage(t *testing.T) {
 func TestExecute(t *testing.T) {
 	messageHandlerMock := &MessageHandlerMock{map[string]string{}}
 	fullfillment := &Fullfillment{
-		state: map[string]LocalState{
-			"test-device": {},
+		devices: map[string]Device{
+			"test-device": {
+				Topic: "topic/%s/set",
+				State: LocalState{},
+			},
 		},
 		handler: messageHandlerMock,
-		executionTemplates: ExecutionTemplates{
-			"test-device": {
-				"action.devices.commands.volumeRelative": `{"volume":"%s"}`,
-			},
+		executionTemplates: map[string]string{
+			"action.devices.commands.volumeRelative": `{"volume":"%s"}`,
 		},
 	}
 
@@ -172,7 +162,7 @@ func TestExecute(t *testing.T) {
 				},
 			},
 			expectedPublication: true,
-			expectedTopic:       "device/test-device/set",
+			expectedTopic:       "topic/test-device/set",
 			expectedMessage:     `{"volume":"decrease"}`,
 		},
 		{
@@ -245,6 +235,50 @@ func TestExecute(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestStateChange(t *testing.T) {
+	messageHandlerMock := &MessageHandlerMock{map[string]string{}}
+	fullfillment := &Fullfillment{
+		devices: map[string]Device{
+			"test-device": {
+				Topic: "topic/%s/set",
+				State: LocalState{
+					State: "this",
+					On:    false,
+				},
+			},
+		},
+		handler: messageHandlerMock,
+		executionTemplates: map[string]string{
+			"action.devices.commands.OnOff": `{"state":"%s"}`,
+		},
+	}
+
+	payload := PayloadRequest{
+		Commands: []CommandRequest{
+			{
+				Devices: []DeviceRequest{
+					{
+						ID: "test-device",
+					},
+				},
+				Execution: []ExecutionRequest{
+					{
+						Command: "action.devices.commands.OnOff",
+						Params: ParamsRequest{
+							On: true,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	_ = fullfillment.execute("test-request", payload)
+
+	assert.Equal(t, true, fullfillment.devices["test-device"].State.On)
+	assert.Equal(t, "this", fullfillment.devices["test-device"].State.State)
 }
 
 type MessageHandlerMock struct {

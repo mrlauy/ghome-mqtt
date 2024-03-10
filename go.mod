@@ -23,7 +23,7 @@ require (
 
 require (
 	github.com/eclipse/paho.mqtt.golang v1.4.3
-	github.com/golang-jwt/jwt v3.2.1+incompatible // indirect
+	github.com/golang-jwt/jwt v3.2.1+incompatible
 	github.com/google/uuid v1.1.1 // indirect
 	github.com/gorilla/mux v1.8.1
 	github.com/tidwall/btree v0.0.0-20191029221954-400434d76274 // indirect

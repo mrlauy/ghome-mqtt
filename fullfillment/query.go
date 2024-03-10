@@ -33,7 +33,7 @@ func (f *Fullfillment) query(requestId string, payload PayloadRequest) QueryResp
 	for _, device := range payload.Devices {
 		devices[device.ID] = QueryDevice{
 			Online: true,
-			On:     f.state[device.ID].On,
+			On:     f.devices[device.ID].State.On,
 		}
 	}
 

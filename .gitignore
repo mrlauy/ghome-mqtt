@@ -22,7 +22,6 @@ go.work
 
 .credentials
 .tokenstore
-devices.json
 config.yaml
 
 .vscode

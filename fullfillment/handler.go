@@ -3,9 +3,10 @@ package fullfillment
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/mrlauy/ghome-mqtt/config"
 	log "log/slog"
 	"net/http"
-	"os"
+	"strings"
 )
 
 type FullfillementRequest struct {
@@ -56,65 +57,56 @@ type ParamsRequest struct {
 type EmptyResponse struct {
 }
 
+type Device struct {
+	Topic string
+	State LocalState
+}
 type LocalState struct {
 	State        string
 	On           bool
 	DebugCommand []string
 }
 
-type ExecutionTemplates = map[string]ActionTemplates
-type ActionTemplates = map[string]string
-
 type Fullfillment struct {
-	devices            []SyncDevices
 	handler            MessageHandler
-	state              map[string]LocalState
-	executionTemplates ExecutionTemplates
+	devices            map[string]Device
+	syncPayload        []SyncDevices
+	executionTemplates map[string]string
 }
 
 type MessageHandler interface {
 	SendMessage(topic string, message string)
 }
 
-func NewFullfillment(devicesFile string, handler MessageHandler, executionTemplates ExecutionTemplates) (*Fullfillment, error) {
-	devices, err := readDevices(devicesFile)
+func NewFullfillment(handler MessageHandler, deviceConfigs map[string]config.DeviceConfig, executionTemplates map[string]string) (*Fullfillment, error) {
+	devices, err := initDevices(deviceConfigs)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Fullfillment{
-		devices:            devices,
 		handler:            handler,
-		state:              initLocalState(devices),
+		devices:            devices,
+		syncPayload:        syncPayload(deviceConfigs),
 		executionTemplates: executionTemplates,
 	}, nil
 }
 
-func readDevices(devicesFile string) ([]SyncDevices, error) {
-	file, err := os.Open(devicesFile)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open devices file %s: %v", devicesFile, err)
-	}
-	defer file.Close()
-
-	var devices []SyncDevices
-	err = json.NewDecoder(file).Decode(&devices)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal devices file %s: %v", devicesFile, err)
-	}
-
-	return devices, nil
-}
-
-func initLocalState(devices []SyncDevices) map[string]LocalState {
-	localState := map[string]LocalState{}
-	for _, device := range devices {
-		localState[device.ID] = LocalState{
-			State: "off",
-			On:    true,
+func initDevices(deviceConfigs map[string]config.DeviceConfig) (map[string]Device, error) {
+	devices := map[string]Device{}
+	for id, config := range deviceConfigs {
+		if !strings.Contains(config.Topic, "%s") {
+			return nil, fmt.Errorf("no %%s in topic config for device '%s'", id)
+		}
+		devices[id] = Device{
+			Topic: config.Topic,
+			State: LocalState{
+				State: "off",
+				On:    true,
+			},
 		}
 	}
-	return localState
+	return devices, nil
 }
 
 func (f *Fullfillment) Handler(w http.ResponseWriter, r *http.Request) {

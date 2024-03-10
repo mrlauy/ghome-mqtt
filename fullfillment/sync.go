@@ -1,6 +1,7 @@
 package fullfillment
 
 import (
+	"github.com/mrlauy/ghome-mqtt/config"
 	log "log/slog"
 )
 
@@ -101,17 +102,17 @@ type SyncPayload struct {
 }
 
 type SyncDevices struct {
-	ID                           string                `json:"id"`                                     // Required. The ID of the device in the developer's cloud. This must be unique for the user and for the developer, as in cases of sharing we may use this to dedupe multiple views of the same device. It should be immutable for the device; if it changes, the Assistant will treat it as a new device.
-	Type                         string                `json:"type"`                                   // Required. The hardware type of device.
-	Traits                       []string              `json:"traits"`                                 // Required. List of traits this device has. This defines the commands, attributes, and states that the device supports.
-	Name                         SyncName              `json:"name"`                                   // Required. Names of this device.
-	WillReportState              bool                  `json:"willReportState"`                        // Required.	Indicates whether this device will have its states updated by the Real Time Feed. (true to use the Real Time Feed for reporting state, and false to use the polling model.)
-	RoomHint                     string                `json:"roomHint,omitempty"`                     // Provides the current room of the device in the user's home to simplify setup.
-	NotificationSupportedByAgent bool                  `json:"notificationSupportedByAgent,omitempty"` // (Default: false) Indicates whether notifications are enabled for the device.
-	DeviceInfo                   *SyncDeviceInfo       `json:"deviceInfo,omitempty"`                   // Contains fields describing the device for use in one-off logic if needed (e.g. 'broken firmware version X of light Y requires adjusting color', or 'security flaw requires notifying all users of firmware Z').
-	OtherDeviceIds               []*SyncOtherDeviceIds `json:"otherDeviceIds,omitempty"`               // List of alternate IDs used to identify a cloud synced device for local execution.
-	CustomData                   *SyncCustomData       `json:"customData,omitempty"`                   // Object defined by the developer which will be attached to future QUERY and EXECUTE requests, maximum of 512 bytes per device. Use this object to store additional information about the device your cloud service may need, such as the global region of the device. Data in this object has a few constraints: No sensitive information, including but not limited to Personally Identifiable Information.
-	Attributes                   *SyncAttributes       `json:"attributes,omitempty"`                   // Aligned with per-trait attributes described in each trait schema reference.
+	ID                           string                 `json:"id"`                                     // Required. The ID of the device in the developer's cloud. This must be unique for the user and for the developer, as in cases of sharing we may use this to dedupe multiple views of the same device. It should be immutable for the device; if it changes, the Assistant will treat it as a new device.
+	Type                         string                 `json:"type"`                                   // Required. The hardware type of device.
+	Traits                       []string               `json:"traits"`                                 // Required. List of traits this device has. This defines the commands, attributes, and states that the device supports.
+	Name                         SyncName               `json:"name"`                                   // Required. Names of this device.
+	WillReportState              bool                   `json:"willReportState"`                        // Required.	Indicates whether this device will have its states updated by the Real Time Feed. (true to use the Real Time Feed for reporting state, and false to use the polling model.)
+	RoomHint                     string                 `json:"roomHint,omitempty"`                     // Provides the current room of the device in the user's home to simplify setup.
+	NotificationSupportedByAgent bool                   `json:"notificationSupportedByAgent,omitempty"` // (Default: false) Indicates whether notifications are enabled for the device.
+	DeviceInfo                   *SyncDeviceInfo        `json:"deviceInfo,omitempty"`                   // Contains fields describing the device for use in one-off logic if needed (e.g. 'broken firmware version X of light Y requires adjusting color', or 'security flaw requires notifying all users of firmware Z').
+	OtherDeviceIds               []*SyncOtherDeviceIds  `json:"otherDeviceIds,omitempty"`               // List of alternate IDs used to identify a cloud synced device for local execution.
+	CustomData                   *SyncCustomData        `json:"customData,omitempty"`                   // Object defined by the developer which will be attached to future QUERY and EXECUTE requests, maximum of 512 bytes per device. Use this object to store additional information about the device your cloud service may need, such as the global region of the device. Data in this object has a few constraints: No sensitive information, including but not limited to Personally Identifiable Information.
+	Attributes                   *config.SyncAttributes `json:"attributes,omitempty"`                   // Aligned with per-trait attributes described in each trait schema reference.
 }
 
 type SyncName struct {
@@ -138,15 +139,21 @@ type SyncCustomData struct {
 	BazValue string `json:"bazValue,omitempty"`
 }
 
-type SyncAttributes struct {
-	ColorModel              string                    `json:"colorModel,omitempty"`
-	ColorTemperatureRange   SyncColorTemperatureRange `json:"colorTemperatureRange,omitempty"`
-	CommandOnlyColorSetting bool                      `json:"commandOnlyColorSetting,omitempty"`
-}
-
-type SyncColorTemperatureRange struct {
-	TemperatureMinK int `json:"temperatureMinK,omitempty"`
-	TemperatureMaxK int `json:"temperatureMaxK,omitempty"`
+func syncPayload(devices map[string]config.DeviceConfig) []SyncDevices {
+	var syncDevices []SyncDevices
+	for id, device := range devices {
+		syncDevices = append(syncDevices, SyncDevices{
+			ID:     id,
+			Type:   device.Type,
+			Traits: device.Traits,
+			Name: SyncName{
+				Name: device.Name,
+			},
+			WillReportState: device.WillReportState,
+			Attributes:      &device.Attributes,
+		})
+	}
+	return syncDevices
 }
 
 func (f *Fullfillment) sync(request FullfillementRequest, userId string) SyncResponse {
@@ -156,7 +163,7 @@ func (f *Fullfillment) sync(request FullfillementRequest, userId string) SyncRes
 		RequestID: requestId,
 		Payload: SyncPayload{
 			AgentUserID: userId,
-			Devices:     f.devices,
+			Devices:     f.syncPayload,
 		},
 	}
 }

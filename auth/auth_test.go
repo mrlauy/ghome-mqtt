@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"fmt"
 	"github.com/mrlauy/ghome-mqtt/config"
 	"net/http"
 	"net/http/httptest"
@@ -16,7 +15,7 @@ func TestAuthorizeRequest(t *testing.T) {
 	responseRecorder := httptest.NewRecorder()
 	redirectLocation := "/login"
 
-	url := fmt.Sprintf("https://myservice.example.com/oauth/authorize?client_id=CLIENT_ID&redirect_uri=REDIRECT_URI&state=STATE_STRING&scope=REQUESTED_SCOPES&response_type=code&user_locale=LOCALE")
+	url := "https://myservice.example.com/oauth/authorize?client_id=CLIENT_ID&redirect_uri=REDIRECT_URI&state=STATE_STRING&scope=REQUESTED_SCOPES&response_type=code&user_locale=LOCALE"
 	auth := NewAuth(authConfig())
 
 	request, err := http.NewRequest(http.MethodGet, url, nil)
@@ -43,7 +42,7 @@ func authConfig() config.AuthConfig {
 		Client: struct {
 			Id     string `yaml:"id" env:"CLIENT_ID" env-default:"000000"`
 			Secret string `yaml:"secret" env:"CLIENT_SECRET" env-default:"999999"`
-			Domain string `yaml:"domain" env:"CLIENT_SECRET" env-default:"https://oauth-redirect.googleusercontent.com/r/project/project-id"`
+			Domain string `yaml:"domain" env:"CLIENT_DOMAIN" env-default:"https://oauth-redirect.googleusercontent.com/r/project/project-id"`
 		}(struct {
 			Id     string
 			Secret string

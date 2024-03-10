@@ -42,7 +42,7 @@ func main() {
 		log.Fatal("failed to start mqtt: ", err)
 	}
 
-	fullfillmentManager, err := fullfillment.NewFullfillment(cfg.Devices.File, mqtt, cfg.ExecutionTemplates)
+	fullfillmentManager, err := fullfillment.NewFullfillment(mqtt, cfg.Devices, cfg.ExecutionTemplates)
 	if err != nil {
 		log.Fatal("failed to start fullfillment handler: ", err)
 	}
