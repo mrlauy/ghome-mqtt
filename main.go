@@ -2,29 +2,19 @@ package main
 
 import (
 	"fmt"
+	"github.com/gorilla/mux"
 	auth2 "github.com/mrlauy/ghome-mqtt/auth"
 	"github.com/mrlauy/ghome-mqtt/config"
+	"github.com/mrlauy/ghome-mqtt/fullfillment"
 	mqtt2 "github.com/mrlauy/ghome-mqtt/mqtt"
 	"html/template"
 	"log"
-	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
-	"os"
-
-	"github.com/gorilla/mux"
-	"github.com/mrlauy/ghome-mqtt/fullfillment"
 )
 
 const requestFullDump = false
-
-const (
-	LevelDebug = slog.Level(-4)
-	LevelInfo  = slog.Level(0)
-	LevelWarn  = slog.Level(4)
-	LevelError = slog.Level(8)
-)
 
 func main() {
 	cfg, err := config.ReadConfig()
@@ -32,9 +22,7 @@ func main() {
 		log.Fatal("failed to read config: ", err)
 	}
 
-	textHandler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: LevelDebug})
-	logger := slog.New(textHandler)
-	logger.Info("")
+	config.InitLogging(cfg.Log.Level)
 
 	auth := auth2.NewAuth(cfg.Auth)
 	mqtt, err := mqtt2.NewMqtt(cfg.Mqtt)

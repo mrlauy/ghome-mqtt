@@ -16,6 +16,7 @@ func TestParseConfig(t *testing.T) {
 	// Expected configuration
 	expectedConfig := &Config{
 		Server: ServerConfig{Port: 9000, Host: "localhost"},
+		Log:    Log{Level: "DEBUG"},
 		Auth: AuthConfig{
 			Client: struct {
 				Id     string `yaml:"id" env:"CLIENT_ID" env-default:"000000"`
@@ -50,6 +51,7 @@ func TestParseConfig(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, expectedConfig.Server, cfg.Server)
+	assert.Equal(t, expectedConfig.Log.Level, cfg.Log.Level)
 	assert.Equal(t, expectedConfig.Auth, cfg.Auth)
 	assert.Equal(t, expectedConfig.Mqtt, cfg.Mqtt)
 	assert.Equal(t, expectedConfig.Devices, cfg.Devices)

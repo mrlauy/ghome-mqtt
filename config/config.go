@@ -14,6 +14,7 @@ type Config struct {
 	Mqtt               MqttConfig              `yaml:"mqtt"`
 	Devices            map[string]DeviceConfig `yaml:"devices"`
 	ExecutionTemplates map[string]string       `yaml:"templates"`
+	Log                Log                     `yaml:"log"`
 }
 
 type ServerConfig struct {
@@ -66,6 +67,10 @@ type SyncAttributes struct {
 type SyncColorTemperatureRange struct {
 	TemperatureMinK int `yaml:"temperatureMinK" json:"temperatureMinK,omitempty"`
 	TemperatureMaxK int `yaml:"temperatureMaxK" json:"temperatureMaxK,omitempty"`
+}
+
+type Log struct {
+	Level string `yaml:"level" env:"LOG_LEVEL" env-default:"INFO"`
 }
 
 func ReadConfig() (*Config, error) {
