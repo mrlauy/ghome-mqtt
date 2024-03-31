@@ -6,7 +6,6 @@ import (
 	"github.com/mrlauy/ghome-mqtt/config"
 	log "log/slog"
 	"net/http"
-	"strings"
 )
 
 type FullfillementRequest struct {
@@ -95,9 +94,6 @@ func NewFullfillment(handler MessageHandler, deviceConfigs map[string]config.Dev
 func initDevices(deviceConfigs map[string]config.DeviceConfig) (map[string]Device, error) {
 	devices := map[string]Device{}
 	for id, config := range deviceConfigs {
-		if !strings.Contains(config.Topic, "%s") {
-			return nil, fmt.Errorf("no %%s in topic config for device '%s'", id)
-		}
 		devices[id] = Device{
 			Topic: config.Topic,
 			State: LocalState{
