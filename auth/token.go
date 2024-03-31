@@ -33,15 +33,12 @@ func (a *Auth) Authorize(w http.ResponseWriter, r *http.Request) {
 		userId := uid.(string)
 
 		state, stateFound := sessionStore.Get("state")
-		if !stateFound {
-			log.Error("failed to find state in session", sessionStore)
-			http.Error(w, "server side error: #3201", http.StatusInternalServerError)
-			return
-		}
 		redirectUri, redirectUriFound := sessionStore.Get("redirectUri")
-		if !redirectUriFound {
-			log.Error("failed to find redirectUri in session", sessionStore)
-			http.Error(w, "server side error: #3202", http.StatusInternalServerError)
+		if !stateFound || !redirectUriFound {
+			sessionStore.Delete("LoggedInUserID")
+			log.Error("logged in user, but no state or redirectUri in session", "user", userId, "session", sessionStore)
+			w.Header().Set("Location", "/login")
+			w.WriteHeader(http.StatusFound)
 			return
 		}
 
