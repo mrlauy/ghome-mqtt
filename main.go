@@ -8,7 +8,7 @@ import (
 	"github.com/mrlauy/ghome-mqtt/fullfillment"
 	mqtt2 "github.com/mrlauy/ghome-mqtt/mqtt"
 	"html/template"
-	"log"
+	log "log/slog"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
@@ -19,7 +19,8 @@ const requestFullDump = false
 func main() {
 	cfg, err := config.ReadConfig()
 	if err != nil {
-		log.Fatal("failed to read config: ", err)
+		log.Error("failed to read config: ", err)
+		return
 	}
 
 	config.InitLogging(cfg.Log.Level)
@@ -27,12 +28,14 @@ func main() {
 	auth := auth2.NewAuth(cfg.Auth)
 	mqtt, err := mqtt2.NewMqtt(cfg.Mqtt)
 	if err != nil {
-		log.Fatal("failed to start mqtt: ", err)
+		log.Error("failed to start mqtt: ", err)
+		return
 	}
 
 	fullfillmentManager, err := fullfillment.NewFullfillment(mqtt, cfg.Devices, cfg.ExecutionTemplates)
 	if err != nil {
-		log.Fatal("failed to start fullfillment handler: ", err)
+		log.Error("failed to start fullfillment handler: ", err)
+		return
 	}
 
 	loginPage := template.Must(template.ParseFiles("templates/login.html"))
@@ -53,8 +56,9 @@ func main() {
 	http.Handle("/", router)
 
 	port := cfg.Server.Port
-	log.Printf("start server on port: %d", port)
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), nil))
+	log.Info("started server", "port", port)
+	err = http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
+	log.Error("failure during execution", err)
 }
 
 func loggingMiddleware(next http.Handler) http.Handler {
@@ -70,22 +74,22 @@ func loggingMiddleware(next http.Handler) http.Handler {
 
 			data, err := httputil.DumpRequest(r, true)
 			if err != nil {
-				log.Println("error dumping request:", err)
+				log.Error("error dumping request", err)
 				return
 			}
 			r.Header = headers
 
-			log.Printf("\n> %s \n%v", r.URL, string(data))
+			log.Info(fmt.Sprintf("\n> %s \n%v", r.URL, string(data)))
 
 			recorder := httptest.NewRecorder()
 			next.ServeHTTP(recorder, r)
 
 			dump, err := httputil.DumpResponse(recorder.Result(), true)
 			if err != nil {
-				log.Println("error dumping response:", err)
+				log.Error("error dumping response", err)
 				return
 			}
-			log.Printf("\n< %s \n %v\n", r.URL, string(dump))
+			log.Info(fmt.Sprintf("\n< %s \n %v\n", r.URL, string(dump)))
 
 			// we copy the captured response headers to our new response
 			for k, v := range recorder.Header() {
