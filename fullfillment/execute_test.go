@@ -103,7 +103,7 @@ func TestExecute(t *testing.T) {
 	fullfillment := &Fullfillment{
 		devices: map[string]Device{
 			"test-device": {
-				Topic: "topic/%s/set",
+				Topic: "topic/device-id/set",
 				State: LocalState{},
 			},
 		},
@@ -162,7 +162,7 @@ func TestExecute(t *testing.T) {
 				},
 			},
 			expectedPublication: true,
-			expectedTopic:       "topic/test-device/set",
+			expectedTopic:       "topic/device-id/set",
 			expectedMessage:     `{"volume":"decrease"}`,
 		},
 		{
@@ -242,7 +242,7 @@ func TestStateChange(t *testing.T) {
 	fullfillment := &Fullfillment{
 		devices: map[string]Device{
 			"test-device": {
-				Topic: "topic/%s/set",
+				Topic: "topic/device-id/set",
 				State: LocalState{
 					State: "this",
 					On:    false,
