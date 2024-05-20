@@ -200,12 +200,13 @@ func (a *Auth) Token(w http.ResponseWriter, r *http.Request) {
 
 func (a *Auth) generateAuthorizationToken(client, secret string, redirectUri string, scope string, authorizationCode string, grantType string, r *http.Request) (map[string]interface{}, error) {
 	tokenGenerateRequest := &oauth2.TokenGenerateRequest{
-		ClientID:     client,
-		ClientSecret: secret,
-		RedirectURI:  redirectUri,
-		Scope:        scope,
-		Code:         authorizationCode,
-		Request:      r,
+		ClientID:       client,
+		ClientSecret:   secret,
+		RedirectURI:    redirectUri,
+		Scope:          scope,
+		Code:           authorizationCode,
+		AccessTokenExp: 24 * time.Hour,
+		Request:        r,
 	}
 	tokenInfo, err := a.manager.GenerateAccessToken(r.Context(), oauth2.GrantType(grantType), tokenGenerateRequest)
 	if err != nil {
