@@ -233,7 +233,7 @@ func (f *Fullfillment) fillMessage(deviceId string, command string, args ...any)
 
 func (f *Fullfillment) sentCommand(deviceId string, message string) {
 	topic := f.devices[deviceId].Topic
-	f.handler.SendMessage(fmt.Sprintf(topic, deviceId), message)
+	f.handler.SendMessage(topic, message)
 }
 
 func errorCommand(deviceId string) ExecuteCommands {
