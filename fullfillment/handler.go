@@ -2,7 +2,6 @@ package fullfillment
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/mrlauy/ghome-mqtt/config"
 	log "log/slog"
 	"net/http"
@@ -75,6 +74,7 @@ type Fullfillment struct {
 
 type MessageHandler interface {
 	SendMessage(topic string, message string)
+	RegisterStateChangeListener(device string, topic string, callback func(string, map[string]interface{})) error
 }
 
 func NewFullfillment(handler MessageHandler, deviceConfigs map[string]config.DeviceConfig, executionTemplates map[string]string) (*Fullfillment, error) {
@@ -83,12 +83,15 @@ func NewFullfillment(handler MessageHandler, deviceConfigs map[string]config.Dev
 		return nil, err
 	}
 
-	return &Fullfillment{
+	fullfillment := &Fullfillment{
 		handler:            handler,
 		devices:            devices,
 		syncPayload:        syncPayload(deviceConfigs),
 		executionTemplates: executionTemplates,
-	}, nil
+	}
+	fullfillment.startListening(deviceConfigs)
+
+	return fullfillment, nil
 }
 
 func initDevices(deviceConfigs map[string]config.DeviceConfig) (map[string]Device, error) {
@@ -105,6 +108,12 @@ func initDevices(deviceConfigs map[string]config.DeviceConfig) (map[string]Devic
 	return devices, nil
 }
 
+func (f *Fullfillment) startListening(deviceConfigs map[string]config.DeviceConfig) {
+	for device, config := range deviceConfigs {
+		f.handler.RegisterStateChangeListener(device, config.Subscription, f.setState)
+	}
+}
+
 func (f *Fullfillment) Handler(w http.ResponseWriter, r *http.Request) {
 	var request FullfillementRequest
 	err := json.NewDecoder(r.Body).Decode(&request)
@@ -115,11 +124,10 @@ func (f *Fullfillment) Handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := f.handle(request)
+	log.Info("fullfillment response", "inputs", request.Inputs, "response", toJson(response))
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-
-	logResponse(response)
 
 	err = json.NewEncoder(w).Encode(response)
 	if err != nil {
@@ -147,12 +155,10 @@ func (f *Fullfillment) handle(request FullfillementRequest) interface{} {
 	return EmptyResponse{}
 }
 
-func logResponse(response interface{}) {
-	str, err := json.MarshalIndent(response, "", "  ")
+func toJson(v any) string {
+	str, err := json.Marshal(v)
 	if err != nil {
 		log.Error("failed to return response", err)
 	}
-
-	log.Info("response:")
-	fmt.Println(string(str))
+	return string(str)
 }

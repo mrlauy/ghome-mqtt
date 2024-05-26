@@ -43,6 +43,7 @@ type MqttConfig struct {
 type DeviceConfig struct {
 	Name            string         `yaml:"name"`
 	Topic           string         `yaml:"topic"`
+	Subscription    string         `yaml:"subscription"`
 	Type            string         `yaml:"type"`
 	WillReportState bool           `yaml:"willReportState"`
 	Attributes      SyncAttributes `yaml:"attributes"`

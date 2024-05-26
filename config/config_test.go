@@ -31,13 +31,17 @@ func TestParseConfig(t *testing.T) {
 			TokenStore:   ".tokenstore",
 		},
 		Mqtt: MqttConfig{
-			Host: "192.168.1.10",
-			Port: 1883, Username: "",
-			Password: "", Tls: false},
+			Host:     "192.168.1.10",
+			Port:     1883,
+			Username: "",
+			Password: "",
+			Tls:      false,
+		},
 		Devices: map[string]DeviceConfig{
 			"plug": {
 				Name:            "plug",
-				Topic:           "",
+				Topic:           "zigbee2mqtt/plug/set",
+				Subscription:    "zigbee2mqtt/plug",
 				Type:            "action.devices.types.OUTLET",
 				WillReportState: false,
 				Attributes:      SyncAttributes{},

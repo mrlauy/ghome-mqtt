@@ -292,3 +292,6 @@ func (m *MessageHandlerMock) Reset() {
 func (m *MessageHandlerMock) SendMessage(topic string, message string) {
 	m.messages[topic] = message
 }
+func (m *MessageHandlerMock) RegisterStateChangeListener(device string, topic string, callback func(string, map[string]interface{})) error {
+	return nil
+}

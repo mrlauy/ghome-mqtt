@@ -6,7 +6,7 @@ import (
 	auth2 "github.com/mrlauy/ghome-mqtt/auth"
 	"github.com/mrlauy/ghome-mqtt/config"
 	"github.com/mrlauy/ghome-mqtt/fullfillment"
-	mqtt2 "github.com/mrlauy/ghome-mqtt/mqtt"
+	"github.com/mrlauy/ghome-mqtt/mqtt"
 	"html/template"
 	log "log/slog"
 	"net/http"
@@ -26,13 +26,13 @@ func main() {
 	config.InitLogging(cfg.Log.Level)
 
 	auth := auth2.NewAuth(cfg.Auth)
-	mqtt, err := mqtt2.NewMqtt(cfg.Mqtt)
+	messageHandler, err := mqtt.NewMqtt(cfg.Mqtt)
 	if err != nil {
 		log.Error("failed to start mqtt: ", err)
 		return
 	}
 
-	fullfillmentManager, err := fullfillment.NewFullfillment(mqtt, cfg.Devices, cfg.ExecutionTemplates)
+	fullfillmentManager, err := fullfillment.NewFullfillment(messageHandler, cfg.Devices, cfg.ExecutionTemplates)
 	if err != nil {
 		log.Error("failed to start fullfillment handler: ", err)
 		return

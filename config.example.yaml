@@ -10,6 +10,8 @@ mqtt:
 devices:
   plug:
     name: plug
+    topic: zigbee2mqtt/plug/set
+    subscription: zigbee2mqtt/plug
     type: action.devices.types.OUTLET
     willReportState: false
     traits:
